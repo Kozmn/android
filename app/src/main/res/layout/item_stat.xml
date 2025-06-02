@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#FFFFFF"
+    android:layout_marginBottom="8dp">
+
+    <TextView
+        android:id="@+id/tv_stat_drug_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nazwa leku"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#333333"/>
+
+    <TextView
+        android:id="@+id/tv_stat_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Data: YYYY-MM-DD"
+        android:textSize="16sp"
+        android:textColor="#555555"/>
+
+    <TextView
+        android:id="@+id/tv_stat_time_taken"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Godzina wzięcia: HH:MM"
+        android:textSize="16sp"
+        android:textColor="#555555"/>
+
+    <TextView
+        android:id="@+id/tv_stat_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Status: Wzięty/Nie wzięty"
+        android:textSize="16sp"
+        android:textStyle="italic"
+        android:textColor="#555555"/>
+
+</LinearLayout>

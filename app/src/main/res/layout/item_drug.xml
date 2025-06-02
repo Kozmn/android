@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tv_drug_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nazwa leku"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#333333"/>
+
+        <TextView
+            android:id="@+id/tv_drug_time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Godzina: HH:MM"
+            android:textSize="16sp"
+            android:textColor="#555555"
+            android:layout_marginTop="4dp"/>
+
+        <TextView
+            android:id="@+id/tv_drug_dosage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dawka: 1 tabletka"
+            android:textSize="16sp"
+            android:textColor="#555555"/>
+
+        <TextView
+            android:id="@+id/tv_drug_dates"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Od YYYY-MM-DD do YYYY-MM-DD"
+            android:textSize="14sp"
+            android:textColor="#666666"/>
+
+        <TextView
+            android:id="@+id/tv_drug_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Info: Dodatkowe informacje"
+            android:textSize="14sp"
+            android:textStyle="italic"
+            android:textColor="#666666"
+            android:visibility="gone"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp">
+
+            <Button
+                android:id="@+id/btn_taken"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Wzięty"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="#4CAF50"/>
+
+            <Button
+                android:id="@+id/btn_delete"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Usuń"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="#FF5252"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

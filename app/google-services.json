@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "803663416004",
+    "project_id": "drugreminder-ce27a",
+    "storage_bucket": "drugreminder-ce27a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:803663416004:android:10a399321258c6068dd791",
+        "android_client_info": {
+          "package_name": "com.example.drugreminder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuov_Ky-Mr4zEVnXKLHAVD9QFijs2O-T0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
