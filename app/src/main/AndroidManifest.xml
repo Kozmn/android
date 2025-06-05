@@ -65,9 +65,14 @@
         <activity android:name=".AddCaregiverActivity" />
         <activity android:name=".StatActivity" />
 
-        <!-- Receiver dla powiadomień -->
+        <!-- Receivers dla powiadomień -->
         <receiver 
             android:name=".NotificationReceiver"
+            android:enabled="true"
+            android:exported="false" />
+            
+        <receiver 
+            android:name=".DrugActionReceiver"
             android:enabled="true"
             android:exported="false" />
 

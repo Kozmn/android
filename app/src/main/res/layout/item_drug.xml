@@ -40,6 +40,15 @@
             android:textColor="#555555"/>
 
         <TextView
+            android:id="@+id/tv_drug_patient"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Pacjent: email@example.com"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:visibility="gone"/>
+
+        <TextView
             android:id="@+id/tv_drug_dates"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
