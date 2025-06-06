@@ -32,6 +32,7 @@ class StatActivity : AppCompatActivity() {
 
     private val db by lazy { FirebaseFirestore.getInstance() }
     private val currentUserEmail by lazy { FirebaseAuth.getInstance().currentUser?.email ?: "" }
+    private var currentUserType: String = ""
     
     private lateinit var recyclerView: RecyclerView
     private lateinit var statAdapter: StatAdapter
@@ -42,7 +43,7 @@ class StatActivity : AppCompatActivity() {
         setContentView(R.layout.layout_activity_stat)
 
         initViews()
-        loadHistory()
+        getUserTypeAndLoadHistory()
     }
 
     private fun initViews() {
@@ -51,10 +52,8 @@ class StatActivity : AppCompatActivity() {
         val copyButton = findViewById<Button>(R.id.btn_copy)
         val shareButton = findViewById<Button>(R.id.btn_share)
 
-        // Konfiguracja RecyclerView
-        statAdapter = StatAdapter(historyList)
+        // Konfiguracja RecyclerView - adapter będzie utworzony po ustaleniu typu użytkownika
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = statAdapter
 
         backButton.setOnClickListener {
             finish()
@@ -69,7 +68,43 @@ class StatActivity : AppCompatActivity() {
         }
     }
 
+    private fun getUserTypeAndLoadHistory() {
+        currentUserEmail?.let { email ->
+            db.collection("users").document(email)
+                .get()
+                .addOnSuccessListener { documentSnapshot ->
+                    if (documentSnapshot.exists()) {
+                        val user = documentSnapshot.toObject(User::class.java)
+                        user?.let {
+                            currentUserType = it.accountType
+                            setupAdapterAndLoadHistory()
+                        }
+                    }
+                }
+                .addOnFailureListener {
+                    // Fallback to patient behavior if unable to determine user type
+                    currentUserType = "pacjent"
+                    setupAdapterAndLoadHistory()
+                }
+        }
+    }
+
+    private fun setupAdapterAndLoadHistory() {
+        // Konfiguracja adaptera z informacją o typie użytkownika
+        statAdapter = StatAdapter(historyList, currentUserType == "opiekun")
+        recyclerView.adapter = statAdapter
+        loadHistory()
+    }
+
     private fun loadHistory() {
+        if (currentUserType == "pacjent") {
+            loadPatientHistory()
+        } else {
+            loadCaregiverPatientsHistory()
+        }
+    }
+
+    private fun loadPatientHistory() {
         db.collection("drug_history")
             .whereEqualTo("patientEmail", currentUserEmail)
             .get()
@@ -87,26 +122,106 @@ class StatActivity : AppCompatActivity() {
             }
     }
 
+    private fun loadCaregiverPatientsHistory() {
+        currentUserEmail?.let { email ->
+            db.collection("users")
+                .whereArrayContains("caregivers", email)
+                .get()
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val patientEmails = mutableListOf<String>()
+                        for (document in task.result) {
+                            val user = document.toObject(User::class.java)
+                            if (user.isPatient()) {
+                                patientEmails.add(user.email)
+                            }
+                        }
+                        
+                        if (patientEmails.isNotEmpty()) {
+                            loadHistoryForPatients(patientEmails)
+                        } else {
+                            historyList.clear()
+                            statAdapter.notifyDataSetChanged()
+                        }
+                    }
+                }
+        }
+    }
+
+    private fun loadHistoryForPatients(patientEmails: List<String>) {
+        historyList.clear()
+        var completedQueries = 0
+        
+        for (patientEmail in patientEmails) {
+            db.collection("drug_history")
+                .whereEqualTo("patientEmail", patientEmail)
+                .get()
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        for (document in task.result) {
+                            val history = document.toObject(DrugHistory::class.java)
+                            historyList.add(history)
+                        }
+                    }
+                    
+                    completedQueries++
+                    if (completedQueries == patientEmails.size) {
+                        // Sortowanie po dacie (najnowsze pierwsze)
+                        historyList.sortByDescending { "${it.date} ${it.timeTaken}" }
+                        statAdapter.notifyDataSetChanged()
+                    }
+                }
+        }
+    }
+
     private fun formatHistoryAsText(): String {
         val currentDate = SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale("pl", "PL")).format(Date())
         
         val sb = StringBuilder()
-        sb.append("Historia leków - Pacjent: $currentUserEmail\n")
+        if (currentUserType == "pacjent") {
+            sb.append("Historia leków - Pacjent: $currentUserEmail\n")
+        } else {
+            sb.append("Historia leków - Opiekun: $currentUserEmail\n")
+            sb.append("Raport dla wszystkich pacjentów pod opieką\n")
+        }
         sb.append("Data wygenerowania: $currentDate\n\n")
         sb.append("=== HISTORIA PRZYJMOWANIA LEKÓW ===\n\n")
 
-        // Grupowanie po datach
-        val groupedByDate = historyList.groupBy { it.date }
-        
-        for ((date, entries) in groupedByDate.toSortedMap(reverseOrder())) {
-            sb.append("📅 $date\n")
+        if (currentUserType == "opiekun") {
+            // Grupowanie po pacjentach, potem po datach
+            val groupedByPatient = historyList.groupBy { it.patientEmail }
             
-            entries.sortedBy { it.timeTaken }.forEach { history ->
-                val statusIcon = if (history.taken) "✅" else "❌"
-                val statusText = if (history.taken) "Wzięty" else "Nie wzięty"
-                sb.append("  • ${history.drugName} - ${history.timeTaken} $statusIcon $statusText\n")
+            for ((patientEmail, patientHistory) in groupedByPatient) {
+                sb.append("👤 PACJENT: $patientEmail\n")
+                sb.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+                
+                val groupedByDate = patientHistory.groupBy { it.date }
+                for ((date, entries) in groupedByDate.toSortedMap(reverseOrder())) {
+                    sb.append("📅 $date\n")
+                    
+                    entries.sortedBy { it.timeTaken }.forEach { history ->
+                        val statusIcon = if (history.taken) "✅" else "❌"
+                        val statusText = if (history.taken) "Wzięty" else "Nie wzięty"
+                        sb.append("  • ${history.drugName} - ${history.timeTaken} $statusIcon $statusText\n")
+                    }
+                    sb.append("\n")
+                }
+                sb.append("\n")
             }
-            sb.append("\n")
+        } else {
+            // Grupowanie po datach (zachowanie dla pacjenta)
+            val groupedByDate = historyList.groupBy { it.date }
+            
+            for ((date, entries) in groupedByDate.toSortedMap(reverseOrder())) {
+                sb.append("📅 $date\n")
+                
+                entries.sortedBy { it.timeTaken }.forEach { history ->
+                    val statusIcon = if (history.taken) "✅" else "❌"
+                    val statusText = if (history.taken) "Wzięty" else "Nie wzięty"
+                    sb.append("  • ${history.drugName} - ${history.timeTaken} $statusIcon $statusText\n")
+                }
+                sb.append("\n")
+            }
         }
 
         if (historyList.isEmpty()) {

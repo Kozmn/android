@@ -10,7 +10,8 @@ import androidx.recyclerview.widget.RecyclerView
  * Adapter dla RecyclerView z historią brania leków
  */
 class StatAdapter(
-    private val historyList: List<DrugHistory>
+    private val historyList: List<DrugHistory>,
+    private val showPatientInfo: Boolean = false
 ) : RecyclerView.Adapter<StatAdapter.StatViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StatViewHolder {
@@ -26,6 +27,13 @@ class StatAdapter(
         holder.date.text = "Data: ${history.date}"
         holder.timeTaken.text = "Godzina wzięcia: ${history.timeTaken}"
         holder.status.text = if (history.taken) "Wzięty" else "Nie wzięty"
+        
+        if (showPatientInfo) {
+            holder.patient.visibility = View.VISIBLE
+            holder.patient.text = "Pacjent: ${history.patientEmail}"
+        } else {
+            holder.patient.visibility = View.GONE
+        }
     }
 
     override fun getItemCount(): Int = historyList.size
@@ -35,6 +43,7 @@ class StatAdapter(
      */
     class StatViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val drugName: TextView = itemView.findViewById(R.id.tv_stat_drug_name)
+        val patient: TextView = itemView.findViewById(R.id.tv_stat_patient)
         val date: TextView = itemView.findViewById(R.id.tv_stat_date)
         val timeTaken: TextView = itemView.findViewById(R.id.tv_stat_time_taken)
         val status: TextView = itemView.findViewById(R.id.tv_stat_status)

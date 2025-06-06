@@ -27,19 +27,18 @@ import com.google.firebase.firestore.FirebaseFirestore
 class NotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val drugId = intent.getStringExtra("drug_id") ?: return
+        val drugName = intent.getStringExtra("drug_name") ?: return
+        val drugDosage = intent.getStringExtra("drug_dosage") ?: return
+        val patientEmail = intent.getStringExtra("patient_email") ?: return
         
         // Pokazanie powiadomienia
-        val notificationHelper = NotificationHelper(context)
-        
-        // Pobierz lek z Firebase i sprawdź czy już został wzięty dzisiaj
-        val db = FirebaseFirestore.getInstance()
-        db.collection("drugs").document(drugId).get()
-            .addOnSuccessListener { document ->
-                val drug = document.toObject(Drug::class.java)
-                drug?.let {
-                    // Zawsze pokazuj powiadomienie - sprawdzanie statusu w aplikacji
-                    notificationHelper.showDrugReminder(drug)
-                }
-            }
+        val notificationId = (drugId + System.currentTimeMillis().toString()).hashCode()
+        NotificationHelper.showDrugReminderNotification(
+            context,
+            drugName,
+            drugDosage,
+            patientEmail,
+            notificationId
+        )
     }
 }

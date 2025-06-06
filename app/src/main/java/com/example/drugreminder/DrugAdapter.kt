@@ -25,7 +25,8 @@ import androidx.recyclerview.widget.RecyclerView
  */
 class DrugAdapter(
     private val drugList: List<Drug>,
-    private val listener: OnDrugActionListener
+    private val listener: OnDrugActionListener,
+    private val showPatientInfo: Boolean = false
 ) : RecyclerView.Adapter<DrugAdapter.DrugViewHolder>() {
 
     interface OnDrugActionListener {
@@ -46,6 +47,14 @@ class DrugAdapter(
         holder.drugTime.text = "Godzina: ${drug.time}"
         holder.drugDosage.text = "Dawka: ${drug.dosage}"
         holder.drugDates.text = "Od ${drug.startDate} do ${drug.endDate}"
+        
+        // Wyświetlanie informacji o pacjencie (tylko dla opiekuna)
+        if (showPatientInfo) {
+            holder.drugPatient.text = "Pacjent: ${drug.patientEmail}"
+            holder.drugPatient.visibility = View.VISIBLE
+        } else {
+            holder.drugPatient.visibility = View.GONE
+        }
         
         // Wyświetlanie dodatkowych informacji
         if (drug.additionalInfo.isNotEmpty()) {
@@ -74,6 +83,7 @@ class DrugAdapter(
         val drugName: TextView = itemView.findViewById(R.id.tv_drug_name)
         val drugTime: TextView = itemView.findViewById(R.id.tv_drug_time)
         val drugDosage: TextView = itemView.findViewById(R.id.tv_drug_dosage)
+        val drugPatient: TextView = itemView.findViewById(R.id.tv_drug_patient)
         val drugDates: TextView = itemView.findViewById(R.id.tv_drug_dates)
         val drugInfo: TextView = itemView.findViewById(R.id.tv_drug_info)
         val takenButton: Button = itemView.findViewById(R.id.btn_taken)

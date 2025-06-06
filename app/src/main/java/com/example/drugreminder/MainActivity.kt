@@ -8,8 +8,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import java.util.concurrent.TimeUnit
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -58,6 +62,7 @@ class MainActivity : AppCompatActivity(), DrugAdapter.OnDrugActionListener {
         initViews()
         getUserTypeAndSetupUI()
         loadDrugs()
+        setupNotifications()
     }
 
     private fun initViews() {
@@ -68,9 +73,7 @@ class MainActivity : AppCompatActivity(), DrugAdapter.OnDrugActionListener {
         val logoutButton = findViewById<Button>(R.id.btn_logout)
 
         // Konfiguracja RecyclerView
-        drugAdapter = DrugAdapter(drugList, this)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = drugAdapter
 
         // Obsługa przycisków
         addDrugButton.setOnClickListener {
@@ -122,6 +125,10 @@ class MainActivity : AppCompatActivity(), DrugAdapter.OnDrugActionListener {
             addDrugButton.visibility = View.GONE
             addCaregiverButton.visibility = View.GONE
         }
+        
+        // Konfiguracja adaptera z informacją o typie użytkownika
+        drugAdapter = DrugAdapter(drugList, this, currentUserType == "opiekun")
+        recyclerView.adapter = drugAdapter
     }
 
     private fun loadDrugs() {
@@ -244,8 +251,23 @@ class MainActivity : AppCompatActivity(), DrugAdapter.OnDrugActionListener {
 
     override fun onResume() {
         super.onResume()
-        if (currentUserType != null) {
-            loadDrugs()
-        }
+        // Odświeżenie listy leków po powrocie do aktywności
+        loadDrugs()
+    }
+
+    private fun setupNotifications() {
+        // Inicjalizacja kanału powiadomień
+        NotificationHelper.createNotificationChannel(this)
+        
+        // Uruchomienie okresowego sprawdzania przypomnień
+        val workRequest = PeriodicWorkRequestBuilder<DrugReminderWorker>(
+            15, TimeUnit.MINUTES // Sprawdzanie co 15 minut
+        ).build()
+        
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "drug_reminder_work",
+            ExistingPeriodicWorkPolicy.KEEP,
+            workRequest
+        )
     }
 }
