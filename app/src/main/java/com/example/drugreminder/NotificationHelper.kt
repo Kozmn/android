@@ -10,31 +10,50 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
 /**
- * Helper class dla zarządzania powiadomieniami o lekach
+ * NotificationHelper - singleton odpowiedzialny za zarządzanie powiadomieniami systemu
  *
- * Funkcjonalności:
- * - Tworzenie kanałów powiadomień
- * - Wyświetlanie powiadomień o czasie przyjęcia leku
- * - Obsługa akcji powiadomień (wzięty/nie wzięty)
+ * Architektura:
+ * - Implementowany jako object (singleton) dla globalnego dostępu
+ * - Wykorzystuje Android Notification API z kompatybilnością wsteczną
+ * - Obsługuje kanały powiadomień wymagane od Androida 8.0 (API 26)
  *
- * Integracja:
- * - Android Notification API
- * - PendingIntent dla akcji
- * - NotificationChannel dla Android 8.0+
+ * Funkcjonalności główne:
+ * - Tworzenie i konfiguracja kanałów powiadomień
+ * - Generowanie powiadomień o przypomnieniach leków
+ * - Obsługa akcji interaktywnych w powiadomieniach
+ * - Zarządzanie cyklem życia powiadomień (wyświetlanie/anulowanie)
+ *
+ * Komponenty systemu powiadomień:
+ * - NotificationChannel: organizuje powiadomienia w grupy (Android 8.0+)
+ * - NotificationCompat.Builder: tworzy powiadomienia kompatybilne z różnymi wersjami
+ * - PendingIntent: obsługuje akcje użytkownika z powiadomień
+ * - NotificationManagerCompat: zarządza wyświetlaniem powiadomień
+ *
+ * Integracje zewnętrzne:
+ * - DrugActionReceiver: obsługuje akcje "Wzięty"/"Nie wzięty"
+ * - MainActivity: otwierana po kliknięciu głównej części powiadomienia
  */
 object NotificationHelper {
     
+    // Stałe konfiguracyjne kanału powiadomień
     private const val CHANNEL_ID = "drug_reminder_channel"
     private const val CHANNEL_NAME = "Przypomnienia o lekach"
     private const val CHANNEL_DESCRIPTION = "Powiadomienia przypominające o czasie przyjęcia leków"
     
+    /**
+     * Tworzy kanał powiadomień wymagany dla Androida 8.0 i nowszych
+     * Konfiguruje priorytet, wibracje i światła dla powiadomień o lekach
+     * 
+     * @param context Context aplikacji wymagany dla dostępu do NotificationManager
+     */
     fun createNotificationChannel(context: Context) {
+        // Sprawdzenie wersji Androida - kanały wymagane tylko od API 26
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = NotificationManager.IMPORTANCE_HIGH
+            val importance = NotificationManager.IMPORTANCE_HIGH // Wysoki priorytet dla zdrowa
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
                 description = CHANNEL_DESCRIPTION
-                enableVibration(true)
-                enableLights(true)
+                enableVibration(true)  // Włączenie wibracji
+                enableLights(true)     // Włączenie diody LED
             }
             
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

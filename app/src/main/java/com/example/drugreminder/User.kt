@@ -1,27 +1,46 @@
 package com.example.drugreminder
 
 /**
- * Model reprezentujący użytkownika aplikacji
+ * User - klasa modelu danych reprezentująca użytkownika systemu
  *
- * Pola:
- * - email: adres email użytkownika (służy jako ID)
- * - accountType: typ konta ("pacjent" lub "opiekun")
- * - caregivers: lista emaili opiekunów (tylko dla pacjentów)
+ * Architektura:
+ * - Data class z metodami pomocniczymi dla zarządzania rolami
+ * - Implementuje system uprawnień oparty na typach kont
+ * - Obsługuje relacje many-to-many między pacjentami a opiekunami
  *
- * Funkcje:
- * - isPatient(): sprawdza czy użytkownik jest pacjentem
- * - isCaregiver(): sprawdza czy użytkownik jest opiekunem
+ * Struktura danych:
+ * - email: unikalny identyfikator użytkownika (klucz główny)
+ * - accountType: typ konta definiujący uprawnienia ("pacjent" | "opiekun")
+ * - caregivers: lista emaili opiekunów przypisanych do pacjenta
  *
- * Wykorzystanie:
- * - Zarządzanie uprawnieniami w aplikacji
- * - Przechowywanie relacji pacjent-opiekun
- * - Kontrola dostępu do funkcjonalności
+ * System uprawnień:
+ * - Pacjent: może dodawać leki, przypisywać opiekunów, oznaczać leki jako przyjęte
+ * - Opiekun: może tylko przeglądać leki i historię przypisanych pacjentów
+ *
+ * Relacje w systemie:
+ * - Pacjent może mieć wielu opiekunów (1:N)
+ * - Opiekun może monitorować wielu pacjentów (M:N)
+ * - Lista "caregivers" jest przechowywana tylko w dokumencie pacjenta
+ *
+ * Zastosowania:
+ * - Kontrola dostępu do funkcji aplikacji
+ * - Personalizacja interfejsu użytkownika
+ * - Zarządzanie relacjami opieka medyczna
  */
 data class User(
-    var email: String = "",
-    var accountType: String = "",
-    var caregivers: MutableList<String> = mutableListOf()
+    var email: String = "",                           // Unikalny identyfikator użytkownika
+    var accountType: String = "",                     // Typ konta: "pacjent" lub "opiekun"
+    var caregivers: MutableList<String> = mutableListOf()  // Lista emaili opiekunów
 ) {
+    /**
+     * Sprawdza czy użytkownik ma uprawnienia pacjenta
+     * @return true jeśli accountType == "pacjent"
+     */
     fun isPatient(): Boolean = accountType == "pacjent"
+    
+    /**
+     * Sprawdza czy użytkownik ma uprawnienia opiekuna
+     * @return true jeśli accountType == "opiekun"
+     */
     fun isCaregiver(): Boolean = accountType == "opiekun"
 }

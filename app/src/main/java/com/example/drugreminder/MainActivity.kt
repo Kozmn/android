@@ -18,64 +18,85 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * MainActivity - główna aktywność aplikacji
+ * MainActivity - główna aktywność aplikacji odpowiedzialna za wyświetlanie i zarządzanie lekami
  *
- * Funkcjonalności:
- * 1. Wyświetlanie listy leków w RecyclerView
- * 2. Różne widoki dla pacjenta i opiekuna
- * 3. Obsługa przycisków:
- *    - Dodawanie leków (tylko pacjent)
- *    - Dodawanie opiekuna (tylko pacjent)
- *    - Wyświetlanie statystyk
- *    - Wylogowanie
- * 4. System powiadomień o lekach
+ * Architektura:
+ * - Implementuje wzorzec Observer przez interfejs DrugAdapter.OnDrugActionListener
+ * - Wykorzystuje lazy initialization dla Firebase komponentów
+ * - Zarządza cyklem życia powiadomień w tle
+ *
+ * Funkcjonalności główne:
+ * 1. Wyświetlanie listy leków w RecyclerView z dynamiczną aktualizacją
+ * 2. Rozróżnienie widoków dla pacjenta i opiekuna (różne uprawnienia)
+ * 3. Obsługa przycisków nawigacyjnych i akcji użytkownika
+ * 4. Automatyczny system powiadomień o lekach w tle
  * 
- * Integracja z Firebase:
- * - Firestore do przechowywania leków
- * - Authentication do zarządzania sesją
+ * Komponenty UI:
+ * - RecyclerView z adapterem do wyświetlania leków
+ * - Przyciski kontekstowe (widoczność zależna od typu użytkownika)
+ * - System nawigacji między aktywnościami
+ * 
+ * Integracja zewnętrzna:
+ * - Firebase Authentication - zarządzanie sesjami użytkowników
+ * - Firebase Firestore - przechowywanie i synchronizacja danych leków
+ * - WorkManager - planowanie powiadomień w tle
  */
 class MainActivity : AppCompatActivity(), DrugAdapter.OnDrugActionListener {
 
+    // Komponenty Firebase inicjalizowane leniwie dla optymalizacji
     private val auth by lazy { FirebaseAuth.getInstance() }
     private val db by lazy { FirebaseFirestore.getInstance() }
     
+    // Elementy interfejsu użytkownika
     private lateinit var recyclerView: RecyclerView
     private lateinit var drugAdapter: DrugAdapter
-    private val drugList = mutableListOf<Drug>()
+    private val drugList = mutableListOf<Drug>() // Lista leków wyświetlana w UI
     
+    // Stan użytkownika do zarządzania uprawnieniami
     private var currentUserEmail: String? = null
-    private var currentUserType: String? = null
+    private var currentUserType: String? = null // "pacjent" lub "opiekun"
 
+    /**
+     * Główna metoda cyklu życia aktywności - inicjalizuje wszystkie komponenty
+     * Przeprowadza weryfikację autoryzacji i konfiguruje interfejs użytkownika
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.layout_activity_main)
 
-        // Sprawdzenie autoryzacji
+        // Weryfikacja stanu autoryzacji - przekierowanie na ekran logowania jeśli niezalogowany
         if (auth.currentUser == null) {
             startActivity(Intent(this, StartActivity::class.java))
             finish()
             return
         }
 
+        // Pobranie danych aktualnie zalogowanego użytkownika
         currentUserEmail = auth.currentUser?.email
         
+        // Sekwencja inicjalizacji komponentów aplikacji
         initViews()
         getUserTypeAndSetupUI()
         loadDrugs()
         setupNotifications()
     }
 
+    /**
+     * Inicjalizacja elementów interfejsu użytkownika i konfiguracja przycisków
+     * Ustawia listenery dla wszystkich interaktywnych elementów
+     */
     private fun initViews() {
+        // Znalezienie elementów UI w layoutcie
         recyclerView = findViewById(R.id.rv_drugs)
         val addDrugButton = findViewById<Button>(R.id.btn_add_drug)
         val addCaregiverButton = findViewById<Button>(R.id.btn_add_caregiver)
         val statsButton = findViewById<Button>(R.id.btn_stats)
         val logoutButton = findViewById<Button>(R.id.btn_logout)
 
-        // Konfiguracja RecyclerView
+        // Konfiguracja RecyclerView z liniowym układem elementów
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        // Obsługa przycisków
+        // Konfiguracja przycisków nawigacyjnych z intencjami do odpowiednich aktywności
         addDrugButton.setOnClickListener {
             startActivity(Intent(this, AddDrugActivity::class.java))
         }
@@ -88,6 +109,7 @@ class MainActivity : AppCompatActivity(), DrugAdapter.OnDrugActionListener {
             startActivity(Intent(this, StatActivity::class.java))
         }
         
+        // Obsługa wylogowania z przeczyszczeniem sesji
         logoutButton.setOnClickListener {
             auth.signOut()
             startActivity(Intent(this, StartActivity::class.java))

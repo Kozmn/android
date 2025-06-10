@@ -9,22 +9,55 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * BroadcastReceiver obsługujący akcje z powiadomień o lekach
+ * DrugActionReceiver - BroadcastReceiver obsługujący akcje z powiadomień o lekach
+ *
+ * Architektura:
+ * - Dziedziczy z BroadcastReceiver dla obsługi intencji systemowych
+ * - Implementuje wzorzec Command dla różnych akcji użytkownika
+ * - Komunikuje się z Firebase Firestore dla persystencji danych
+ *
+ * Funkcjonalności główne:
+ * - Obsługa akcji "Lek wzięty" z powiadomienia push
+ * - Obsługa akcji "Lek nie wzięty" z powiadomienia push
+ * - Automatyczne zapisywanie historii przyjmowania leków
+ * - Zarządzanie cyklem życia powiadomień (anulowanie po akcji)
+ *
+ * Stałe akcji:
+ * - ACTION_DRUG_TAKEN: identyfikator akcji oznaczenia leku jako wzięty
+ * - ACTION_DRUG_NOT_TAKEN: identyfikator akcji oznaczenia leku jako pominięty
+ *
+ * Przepływ danych:
+ * 1. Użytkownik klika akcję w powiadomieniu
+ * 2. System wywołuje onReceive z odpowiednim Intent
+ * 3. Receiver zapisuje historię do Firestore
+ * 4. Wyświetla potwierdzenie użytkownikowi
+ * 5. Anuluje powiadomienie
  */
 class DrugActionReceiver : BroadcastReceiver() {
     
     companion object {
+        // Stałe identyfikujące rodzaje akcji obsługiwanych przez receiver
         const val ACTION_DRUG_TAKEN = "com.example.drugreminder.DRUG_TAKEN"
         const val ACTION_DRUG_NOT_TAKEN = "com.example.drugreminder.DRUG_NOT_TAKEN"
     }
     
+    // Instancja Firebase Firestore do zapisu historii
     private val db = FirebaseFirestore.getInstance()
     
+    /**
+     * Główna metoda obsługi otrzymanych intencji broadcast
+     * Analizuje typ akcji i wykonuje odpowiednie operacje
+     * 
+     * @param context Context aplikacji
+     * @param intent Intent zawierający dane o akcji i leku
+     */
     override fun onReceive(context: Context, intent: Intent) {
+        // Pobranie danych z Intent - walidacja obecności wymaganych parametrów
         val drugName = intent.getStringExtra("drug_name") ?: return
         val notificationId = intent.getIntExtra("notification_id", -1)
         val patientEmail = intent.getStringExtra("patient_email") ?: return
         
+        // Obsługa różnych typów akcji użytkownika
         when (intent.action) {
             ACTION_DRUG_TAKEN -> {
                 saveDrugHistory(context, drugName, patientEmail, true)

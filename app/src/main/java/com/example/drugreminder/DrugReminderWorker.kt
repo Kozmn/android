@@ -9,33 +9,45 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * WorkManager Worker odpowiedzialny za wysyłanie powiadomień o lekach
+ * DrugReminderWorker - WorkManager Worker odpowiedzialny za automatyczne powiadomienia o lekach
  *
- * Funkcjonalności:
- * - Sprawdzanie aktywnych leków w Firestore
- * - Porównywanie czasu z harmonogramem leków
- * - Wysyłanie powiadomień dla leków w odpowiednim czasie
- * - Obsługa błędów i logowanie
+ * Architektura:
+ * - Dziedziczy z CoroutineWorker dla asynchronicznego przetwarzania w tle
+ * - Implementuje wzorzec Background Job dla długotrwałych operacji
+ * - Wykorzystuje Kotlin Coroutines dla nieblokujących operacji I/O
  *
- * Harmonogram:
- * - Uruchamiany periodycznie przez WorkManager
- * - Sprawdza wszystkie leki dla wszystkich pacjentów
- * - Wysyła powiadomienia tylko w odpowiednim czasie
+ * Cykl działania:
+ * 1. Pobieranie wszystkich aktywnych leków z Firestore
+ * 2. Filtrowanie leków aktywnych w bieżącym dniu
+ * 3. Sprawdzanie czy nadszedł czas na powiadomienie (±5 min tolerancja)
+ * 4. Weryfikacja czy lek nie został już wzięty dzisiaj
+ * 5. Wysyłanie powiadomienia przez NotificationHelper
  *
- * Integracja:
- * - Firebase Firestore do pobierania leków
- * - NotificationHelper do wyświetlania powiadomień
- * - DrugHistory do sprawdzania czy lek już został wzięty
+ * Logika czasowa:
+ * - Uruchamiany co 15 minut przez WorkManager
+ * - Sprawdza harmonogram wszystkich pacjentów jednocześnie
+ * - Tolerancja ±5 minut dla czasu powiadomienia
+ * - Respektuje daty rozpoczęcia i zakończenia kuracji
+ *
+ * Integracje zewnętrzne:
+ * - Firebase Firestore: pobieranie leków i historii
+ * - NotificationHelper: wyświetlanie powiadomień
+ * - WorkManager: planowanie wykonania w tle
  */
 class DrugReminderWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
+    // Instancje do komunikacji z Firebase i formatowania dat
     private val db = FirebaseFirestore.getInstance()
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
+    /**
+     * Główna metoda wykonywana przez WorkManager
+     * Zwraca Result określający status zakończenia zadania
+     */
     override suspend fun doWork(): Result {
         return try {
             checkAndSendDrugReminders()
