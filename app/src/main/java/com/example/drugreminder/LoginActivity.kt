@@ -9,25 +9,17 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 
 /**
- * Aktywność obsługująca logowanie użytkownika
+ * LoginActivity - ekran logowania dla istniejących użytkowników  
  *
- * Funkcjonalności:
- * - Formularz logowania (email + hasło)
- * - Walidacja pól formularza
- * - Integracja z Firebase Authentication
- *
- * Walidacje:
- * - Sprawdzanie pustych pól
- * - Podstawowa walidacja formatu email
+ * Użytkownicy którzy już mają konto mogą się zalogować wpisując email i hasło.
+ * Firebase sprawdza czy dane są poprawne i czy konto istnieje.
  * 
- * Obsługa błędów:
- * - Nieprawidłowe dane logowania
- * - Problemy z połączeniem
- * - Informacje zwrotne przez Toast
+ * Podstawowe walidacje:
+ * - Sprawdza czy pola nie są puste
+ * - Firebase weryfikuje poprawność danych logowania
  *
- * Po udanym logowaniu:
- * - Przejście do MainActivity
- * - Zamknięcie aktywności logowania
+ * Po udanym logowaniu przechodzi do głównego ekranu i zapamięta sesję.
+ * Po nieudanym pokazuje komunikat o błędzie.
  */
 class LoginActivity : AppCompatActivity() {
 
@@ -43,23 +35,28 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun loginUser() {
+        // Pobieramy dane z formularza
         val email = findViewById<EditText>(R.id.et_email).text.toString().trim()
         val password = findViewById<EditText>(R.id.et_password).text.toString()
 
-        // Sprawdzenie pustych pól
+        // Sprawdzamy czy użytkownik wpisał cokolwiek
+        // Nie wysyłamy pustych danych do Firebase
         if (email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Wypełnij wszystkie pola", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Logowanie przez Firebase
+        // Próbujemy zalogować przez Firebase
+        // Firebase sprawdzi czy email i hasło się zgadzają z bazą danych
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
+                    // Udało się! Dane są poprawne
                     Toast.makeText(this, "Logowanie udane", Toast.LENGTH_SHORT).show()
                     startActivity(Intent(this, MainActivity::class.java))
-                    finish()
+                    finish() // Zamykamy ekran logowania
                 } else {
+                    // Nie udało się - błędny email lub hasło
                     Toast.makeText(this, "Błędny login lub hasło", Toast.LENGTH_SHORT).show()
                 }
             }

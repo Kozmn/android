@@ -7,24 +7,13 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 
 /**
- * Ekran startowy aplikacji (Launcher Activity)
+ * StartActivity - pierwszy ekran po uruchomieniu aplikacji
  *
- * Funkcjonalności:
- * - Sprawdzanie stanu logowania użytkownika
- * - Przekierowanie do MainActivity dla zalogowanych użytkowników
- * - Przyciski do rejestracji i logowania dla nowych użytkowników
+ * Sprawdza czy użytkownik jest już zalogowany w Firebase.
+ * Jeśli tak, od razu przechodzi do głównego ekranu z lekami.
+ * Jeśli nie, pokazuje przyciski do logowania i rejestracji.
  *
- * Przepływ:
- * 1. Sprawdzenie stanu auth w Firebase
- * 2. Jeśli użytkownik zalogowany -> MainActivity
- * 3. Jeśli niezalogowany -> wyświetlenie przycisków:
- *    - Zaloguj się -> LoginActivity
- *    - Zarejestruj się -> RegisterActivity
- *
- * Design:
- * - Prosty, przejrzysty interfejs
- * - Logo aplikacji
- * - Opis funkcjonalności
+ * Dzięki temu nie trzeba logować się za każdym razem gdy otwiera się aplikację.
  */
 class StartActivity : AppCompatActivity() {
 
@@ -34,21 +23,26 @@ class StartActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.layout_activity_start)
 
-        // Sprawdzenie czy użytkownik jest zalogowany
+        // Sprawdzamy czy ktoś jest już zalogowany
+        // Firebase pamięta sesję więc nie trzeba logować się za każdym razem
         auth.currentUser?.let {
+            // Jeśli ktoś jest zalogowany, od razu idziemy do głównego ekranu
             startActivity(Intent(this, MainActivity::class.java))
-            finish()
+            finish() // Zamykamy ten ekran żeby nie można było wrócić
             return
         }
 
+        // Jeśli nikt nie jest zalogowany, pokazujemy przyciski
         setupButtons()
     }
 
     private fun setupButtons() {
+        // Przycisk "Zaloguj się" otwiera ekran logowania
         findViewById<Button>(R.id.btn_login).setOnClickListener {
             startActivity(Intent(this, LoginActivity::class.java))
         }
         
+        // Przycisk "Zarejestruj się" otwiera ekran rejestracji
         findViewById<Button>(R.id.btn_register).setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }

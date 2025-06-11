@@ -16,17 +16,32 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * Aktywność odpowiedzialna za wyświetlanie historii i statystyk przyjmowania leków
+ * StatActivity - ekran pokazujący historię brania leków
  *
- * Funkcjonalności:
- * - Wyświetlanie historii przyjmowania leków w RecyclerView
- * - Sortowanie historii według daty (najnowsze pierwsze)
- * 
- * Implementacja:
- * - Wykorzystanie Firebase Firestore do pobierania danych
+ * Po co to istnieje?
+ * - Żeby użytkownik mógł zobaczyć kiedy i jakie leki brał
+ * - Żeby opiekun mógł sprawdzić czy jego pacjenci biorą leki
+ * - Żeby można było wyeksportować historię (skopiować, wysłać lekarzowi)
  *
- * Bezpieczeństwo:
- * - Filtrowanie danych według zalogowanego użytkownika
+ * Jak to działa dla PACJENTA:
+ * - Widzi tylko swoją historię leków
+ * - Posortowaną od najnowszych do najstarszych
+ * - Bez dodatkowych informacji
+ *
+ * Jak to działa dla OPIEKUNA:
+ * - Widzi historię WSZYSTKICH swoich pacjentów
+ * - Przy każdym leku napisane jest czyj to lek
+ * - Może eksportować zbiorczy raport
+ *
+ * Funkcje dodatkowe:
+ * - Kopiowanie historii do schowka (można wkleić gdzie indziej)
+ * - Udostępnianie przez email, WhatsApp itp.
+ * - Ładne formatowanie z emoji i polskimi znakami
+ *
+ * Dlaczego jest skomplikowane:
+ * - Pacjent: 1 zapytanie do bazy danych (tylko swoje leki)
+ * - Opiekun: musi najpierw znaleźć swoich pacjentów, potem leki każdego z nich
+ * - Wszystko musi być zsynchronizowane żeby nie pokazać niepełnych danych
  */
 class StatActivity : AppCompatActivity() {
 
@@ -68,6 +83,20 @@ class StatActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Pobiera typ użytkownika i inicjuje odpowiednią logikę ładowania danych
+     * 
+     * Procedura inicjalizacji "na chłopski rozum":
+     * 1. Sprawdź w bazie danych jaki typ konta ma zalogowany użytkownik
+     * 2. Na podstawie typu (pacjent/opiekun) wybierz strategię pobierania danych
+     * 3. Skonfiguruj adapter RecyclerView z odpowiednią flagą wyświetlania
+     * 4. Rozpocznij ładowanie historii leków
+     * 
+     * Fallback w przypadku błędu:
+     * - Jeśli nie można określić typu użytkownika, zakładamy "pacjent"
+     * - Bezpieczniejsze niż crash - pacjent ma ograniczone uprawnienia
+     * - W najgorszym przypadku opiekun zobaczy tylko pustą listę
+     */
     private fun getUserTypeAndLoadHistory() {
         currentUserEmail?.let { email ->
             db.collection("users").document(email)
@@ -82,7 +111,7 @@ class StatActivity : AppCompatActivity() {
                     }
                 }
                 .addOnFailureListener {
-                    // Fallback to patient behavior if unable to determine user type
+                    // Fallback do trybu pacjenta gdy nie można określić typu użytkownika
                     currentUserType = "pacjent"
                     setupAdapterAndLoadHistory()
                 }
@@ -96,14 +125,43 @@ class StatActivity : AppCompatActivity() {
         loadHistory()
     }
 
+    /**
+     * Rozgałęzienie logiki ładowania danych na podstawie typu użytkownika
+     * 
+     * Dwie różne strategie "na chłopski rozum":
+     * 
+     * PACJENT -> loadPatientHistory():
+     * - 1 zapytanie do "drug_history" WHERE patientEmail = mój_email
+     * - Proste, szybkie, bezpieczne
+     * 
+     * OPIEKUN -> loadCaregiverPatientsHistory():  
+     * - Krok 1: Znajdź pacjentów, którzy mnie dodali (zapytanie do "users")
+     * - Krok 2: Dla każdego pacjenta pobierz historię (N zapytań do "drug_history")
+     * - Skomplikowane, wolniejsze, ale potrzebne dla funkcjonalności opiekuna
+     */
     private fun loadHistory() {
         if (currentUserType == "pacjent") {
-            loadPatientHistory()
+            loadPatientHistory()     // Prosty przypadek
         } else {
-            loadCaregiverPatientsHistory()
+            loadCaregiverPatientsHistory()  // Skomplikowany przypadek
         }
     }
 
+    /**
+     * Pobiera historię leków dla pacjenta - prosty przypadek
+     * 
+     * Zapytanie Firestore "na chłopski rozum":
+     * 1. Idź do kolekcji "drug_history"
+     * 2. Znajdź wszystkie dokumenty gdzie patientEmail == mój email
+     * 3. Skonwertuj każdy dokument na obiekt DrugHistory
+     * 4. Posortuj według daty i czasu (najnowsze pierwsze)
+     * 5. Odśwież adapter UI
+     * 
+     * Sortowanie według "${date} ${timeTaken}":
+     * - String concatenation dat i czasów
+     * - Format YYYY-MM-DD HH:MM sortuje się poprawnie leksykograficznie
+     * - sortByDescending() daje najnowsze wpisy na górze
+     */
     private fun loadPatientHistory() {
         db.collection("drug_history")
             .whereEqualTo("patientEmail", currentUserEmail)
@@ -115,31 +173,52 @@ class StatActivity : AppCompatActivity() {
                         val history = document.toObject(DrugHistory::class.java)
                         historyList.add(history)
                     }
-                    // Sortowanie po dacie (najnowsze pierwsze)
+                    // Sortowanie chronologiczne - najnowsze wpisy pierwsze
                     historyList.sortByDescending { "${it.date} ${it.timeTaken}" }
                     statAdapter.notifyDataSetChanged()
                 }
             }
     }
 
+    /**
+     * Pobiera historię dla opiekuna - skomplikowany dwuetapowy proces
+     * 
+     * Problem opiekuna "na chłopski rozum":
+     * Opiekun nie ma bezpośredniego dostępu do historii. Musi:
+     * 1. Znaleźć swoich podopiecznych (pacjentów, którzy go dodali)
+     * 2. Pobrać historię każdego z nich
+     * 
+     * ETAP 1: Znajdź pacjentów
+     * - Szukaj w "users" gdzie tablica "caregivers" zawiera mój email
+     * - whereArrayContains() to specjalne zapytanie NoSQL dla tablic
+     * - Filtruj tylko pacjentów (może być mix pacjent/opiekun w wyniku)
+     * 
+     * ETAP 2: Pobierz historie
+     * - Jeśli znaleziono pacjentów -> loadHistoryForPatients()
+     * - Jeśli brak -> wyczyść listę (opiekun bez podopiecznych)
+     */
     private fun loadCaregiverPatientsHistory() {
         currentUserEmail?.let { email ->
+            // ETAP 1: Znajdź pacjentów, którzy dodali mnie jako opiekuna
             db.collection("users")
-                .whereArrayContains("caregivers", email)
+                .whereArrayContains("caregivers", email)  // Przeszukaj tablice
                 .get()
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         val patientEmails = mutableListOf<String>()
                         for (document in task.result) {
                             val user = document.toObject(User::class.java)
+                            // Filtruj tylko rzeczywistych pacjentów
                             if (user.isPatient()) {
                                 patientEmails.add(user.email)
                             }
                         }
                         
+                        // ETAP 2: Pobierz historie znalezionych pacjentów
                         if (patientEmails.isNotEmpty()) {
                             loadHistoryForPatients(patientEmails)
                         } else {
+                            // Opiekun bez podopiecznych - pokaż pustą listę
                             historyList.clear()
                             statAdapter.notifyDataSetChanged()
                         }
@@ -148,25 +227,56 @@ class StatActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Pobiera historię dla listy pacjentów - wyzwanie synchronizacji asynchronicznych operacji
+     * 
+     * Problem asynchroniczności "na chłopski rozum":
+     * 1. Mamy N pacjentów, każdy wymaga osobnego zapytania do Firestore
+     * 2. Wszystkie zapytania lecą równolegle (async)
+     * 3. Nie wiemy w jakiej kolejności odpowiedzi wrócą
+     * 4. Nie wiemy kiedy WSZYSTKIE się skończą
+     * 5. Dopiero po wszystkich możemy posortować i wyświetlić dane
+     * 
+     * Rozwiązanie - licznik completedQueries:
+     * - Zmienna zliczająca ile zapytań już się zakończyło
+     * - Po każdym zapytaniu: completedQueries++
+     * - Gdy completedQueries == patientEmails.size -> wszystkie gotowe
+     * - Dopiero wtedy sortuj i odśwież UI
+     * 
+     * Alternatywne rozwiązania (nie użyte):
+     * - CountDownLatch - bardziej skomplikowane
+     * - Kotlin Coroutines + async/await - wymagałoby refaktoringu
+     * - RxJava/Reactive Streams - overkill dla tego przypadku
+     * 
+     * Sortowanie finalne:
+     * - Wszystkie historie z wszystkich pacjentów w jednej liście
+     * - Posortowane chronologicznie (najnowsze pierwsze)
+     * - StatAdapter z flagą showPatientName=true pokaże czyja to historia
+     */
     private fun loadHistoryForPatients(patientEmails: List<String>) {
         historyList.clear()
-        var completedQueries = 0
+        var completedQueries = 0  // Licznik zakończonych zapytań
         
+        // Uruchom równoległe zapytania dla każdego pacjenta
         for (patientEmail in patientEmails) {
             db.collection("drug_history")
                 .whereEqualTo("patientEmail", patientEmail)
                 .get()
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
+                        // Dodaj historie tego pacjenta do globalnej listy
                         for (document in task.result) {
                             val history = document.toObject(DrugHistory::class.java)
                             historyList.add(history)
                         }
                     }
                     
+                    // Zwiększ licznik zakończonych zapytań
                     completedQueries++
+                    
+                    // Sprawdź czy to było ostatnie zapytanie
                     if (completedQueries == patientEmails.size) {
-                        // Sortowanie po dacie (najnowsze pierwsze)
+                        // Wszystkie zapytania zakończone - teraz można sortować i wyświetlać
                         historyList.sortByDescending { "${it.date} ${it.timeTaken}" }
                         statAdapter.notifyDataSetChanged()
                     }
