@@ -10,7 +10,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
 /**
- * NotificationHelper - singleton odpowiedzialny za zarządzanie powiadomieniami systemu
+  * NotificationHelper - singleton odpowiedzialny za zarządzanie powiadomieniami systemu
  *
  * Architektura:
  * - Implementowany jako object (singleton) dla globalnego dostępu
@@ -140,10 +140,5 @@ object NotificationHelper {
     
     fun cancelNotification(context: Context, notificationId: Int) {
         NotificationManagerCompat.from(context).cancel(notificationId)
-    }
-
-    fun cancelNotification(drugId: String) {
-        // This method is kept for backwards compatibility but won't work without context
-        // Use the other cancelNotification method instead
     }
 }

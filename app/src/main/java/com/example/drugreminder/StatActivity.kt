@@ -18,22 +18,16 @@ import java.util.*
 /**
  * StatActivity - ekran pokazujący historię brania leków
  *
- * Po co to istnieje?
- * - Żeby użytkownik mógł zobaczyć kiedy i jakie leki brał
- * - Żeby opiekun mógł sprawdzić czy jego pacjenci biorą leki
- * - Żeby można było wyeksportować historię (skopiować, wysłać lekarzowi)
- *
- * Jak to działa dla PACJENTA:
- * - Widzi tylko swoją historię leków
- * - Posortowaną od najnowszych do najstarszych
- * - Bez dodatkowych informacji
- *
- * Jak to działa dla OPIEKUNA:
- * - Widzi historię WSZYSTKICH swoich pacjentów
- * - Przy każdym leku napisane jest czyj to lek
- * - Może eksportować zbiorczy raport
- *
- * Funkcje dodatkowe:
+ * Pacjent widzi tylko swoją historię posortowaną od najnowszych.
+ * Opiekun widzi historię wszystkich swoich pacjentów z oznaczeniem czyj to lek.
+ * 
+ * Dodatkowo można eksportować historię - skopiować do schowka lub wysłać
+ * przez inne aplikacje (email, WhatsApp, etc.) np. do lekarza.
+ * 
+ * Historia zawiera: nazwę leku, datę, godzinę wzięcia i czy został przyjęty.
+ * Wszystko jest posortowane chronologicznie dla łatwego przeglądania.
+ * 
+ * Funkcje eksportu:
  * - Kopiowanie historii do schowka (można wkleić gdzie indziej)
  * - Udostępnianie przez email, WhatsApp itp.
  * - Ładne formatowanie z emoji i polskimi znakami
@@ -98,7 +92,7 @@ class StatActivity : AppCompatActivity() {
      * - W najgorszym przypadku opiekun zobaczy tylko pustą listę
      */
     private fun getUserTypeAndLoadHistory() {
-        currentUserEmail?.let { email ->
+        currentUserEmail.let { email ->
             db.collection("users").document(email)
                 .get()
                 .addOnSuccessListener { documentSnapshot ->
@@ -198,7 +192,7 @@ class StatActivity : AppCompatActivity() {
      * - Jeśli brak -> wyczyść listę (opiekun bez podopiecznych)
      */
     private fun loadCaregiverPatientsHistory() {
-        currentUserEmail?.let { email ->
+        currentUserEmail.let { email ->
             // ETAP 1: Znajdź pacjentów, którzy dodali mnie jako opiekuna
             db.collection("users")
                 .whereArrayContains("caregivers", email)  // Przeszukaj tablice

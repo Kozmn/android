@@ -164,10 +164,6 @@ class DrugReminderWorker(
             false
         }
     }
-        } catch (e: Exception) {
-            false
-        }
-    }
 
     private fun isTimeForDrug(drugTime: String, currentTime: String): Boolean {
         return try {

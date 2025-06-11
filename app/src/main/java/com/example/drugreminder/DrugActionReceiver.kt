@@ -60,11 +60,11 @@ class DrugActionReceiver : BroadcastReceiver() {
         // Obsługa różnych typów akcji użytkownika
         when (intent.action) {
             ACTION_DRUG_TAKEN -> {
-                saveDrugHistory(context, drugName, patientEmail, true)
+                saveDrugHistory(drugName, patientEmail, true)
                 Toast.makeText(context, "Lek oznaczony jako wzięty", Toast.LENGTH_SHORT).show()
             }
             ACTION_DRUG_NOT_TAKEN -> {
-                saveDrugHistory(context, drugName, patientEmail, false)
+                saveDrugHistory(drugName, patientEmail, false)
                 Toast.makeText(context, "Lek oznaczony jako nie wzięty", Toast.LENGTH_SHORT).show()
             }
         }
@@ -75,7 +75,7 @@ class DrugActionReceiver : BroadcastReceiver() {
         }
     }
     
-    private fun saveDrugHistory(context: Context, drugName: String, patientEmail: String, taken: Boolean) {
+    private fun saveDrugHistory(drugName: String, patientEmail: String, taken: Boolean) {
         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         
